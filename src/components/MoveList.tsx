@@ -110,7 +110,18 @@ export function MoveList({
 
   const activeRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: 'nearest' })
+    const el = activeRef.current
+    if (!el) return
+    // Scroll ONLY the move-list container into view — never the page/window, so
+    // the board stays put while stepping through moves.
+    const container = el.closest<HTMLElement>('[data-scroll-container]')
+    if (!container) return
+    const c = container.getBoundingClientRect()
+    const e = el.getBoundingClientRect()
+    const pad = 8
+    if (e.top < c.top + pad) container.scrollTop -= c.top + pad - e.top
+    else if (e.bottom > c.bottom - pad)
+      container.scrollTop += e.bottom - (c.bottom - pad)
   }, [activeIndex, activeIsVar])
 
   const sp = variation?.startPly ?? null

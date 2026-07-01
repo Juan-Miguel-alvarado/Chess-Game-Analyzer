@@ -49,27 +49,37 @@ function RatingBadge({
   const top = y - badge * 0.45
   const meta = RATING_META[move.rating]
   const Glyph = RATING_ICONS[move.rating]
+  const notable =
+    !move.pending &&
+    (move.rating === 'brilliant' || move.rating === 'blunder')
 
   return (
     <div
-      className="pointer-events-none absolute z-10 flex items-center justify-center rounded-full shadow-md ring-2 ring-[#16181d]/40"
-      style={{
-        left,
-        top,
-        width: badge,
-        height: badge,
-        backgroundColor: move.pending ? 'var(--charcoal)' : meta.colorVar,
-      }}
+      className="animate-badge-pop pointer-events-none absolute z-10"
+      style={{ left, top, width: badge, height: badge }}
     >
-      {move.pending ? (
-        <IconLoader2
-          size={badge * 0.62}
-          className="animate-spin text-white"
-          stroke={2.5}
+      {notable && (
+        <div
+          className="animate-glow-pulse absolute inset-0 rounded-full"
+          style={{ boxShadow: `0 0 ${badge * 0.5}px ${badge * 0.28}px ${meta.colorVar}` }}
         />
-      ) : (
-        <Glyph size={badge * 0.66} stroke={2.5} className="text-[#16181d]" />
       )}
+      <div
+        className="relative flex h-full w-full items-center justify-center rounded-full shadow-md ring-2 ring-[#16181d]/40"
+        style={{
+          backgroundColor: move.pending ? 'var(--charcoal)' : meta.colorVar,
+        }}
+      >
+        {move.pending ? (
+          <IconLoader2
+            size={badge * 0.62}
+            className="animate-spin text-white"
+            stroke={2.5}
+          />
+        ) : (
+          <Glyph size={badge * 0.66} stroke={2.5} className="text-[#16181d]" />
+        )}
+      </div>
     </div>
   )
 }
@@ -184,7 +194,12 @@ export function Board({
         />
       </div>
       {currentMove && (
-        <RatingBadge move={currentMove} orientation={orientation} size={size} />
+        <RatingBadge
+          key={`${currentMove.index}-${currentMove.rating}-${currentMove.pending ? 'p' : 'd'}`}
+          move={currentMove}
+          orientation={orientation}
+          size={size}
+        />
       )}
     </div>
   )

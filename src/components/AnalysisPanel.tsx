@@ -38,56 +38,89 @@ export function AnalysisPanel({
   const meta = move ? RATING_META[move.rating] : null
   const showBest =
     move && !move.isBest && move.rating !== 'brilliant' && move.bestMoveSan
+  const showLoss =
+    move &&
+    !move.pending &&
+    move.cpLoss >= 20 &&
+    (move.rating === 'inaccuracy' ||
+      move.rating === 'mistake' ||
+      move.rating === 'blunder')
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="min-h-[88px] rounded-xl border border-border bg-card p-4">
-        {move && move.pending ? (
-          <div className="flex items-center gap-3">
-            <IconLoader2 size={24} className="animate-spin text-primary" />
-            <div>
-              <div className="text-lg font-semibold tabular-nums">
-                {move.moveNumber}
-                {move.color === 'w' ? '.' : '...'} {move.san}
-              </div>
-              <p className="text-sm text-muted-foreground">Evaluating your move…</p>
-            </div>
-          </div>
-        ) : move && meta ? (
-          <div className="flex items-start gap-3">
-            <MoveRatingIcon rating={move.rating} size={30} />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold tabular-nums">
+      <div
+        className="min-h-[88px] overflow-hidden rounded-xl border border-border bg-card p-4"
+        style={
+          meta && !move?.pending
+            ? {
+                borderColor: `color-mix(in srgb, ${meta.colorVar} 45%, var(--border))`,
+              }
+            : undefined
+        }
+      >
+        <div key={move?.index ?? 'start'} className="animate-rise-in">
+          {move && move.pending ? (
+            <div className="flex items-center gap-3">
+              <IconLoader2 size={24} className="animate-spin text-primary" />
+              <div>
+                <div className="text-lg font-semibold tabular-nums">
                   {move.moveNumber}
                   {move.color === 'w' ? '.' : '...'} {move.san}
-                </span>
-                <span
-                  className="rounded-md px-1.5 py-0.5 text-xs font-semibold"
-                  style={{
-                    color: meta.colorVar,
-                    backgroundColor: `color-mix(in srgb, ${meta.colorVar} 16%, transparent)`,
-                  }}
-                >
-                  {meta.symbol === meta.label
-                    ? meta.label
-                    : `${meta.symbol} ${meta.label}`}
-                </span>
-                <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
-                  {evalText(toWhiteCp(move.evalAfter))}
-                </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Evaluating your move…
+                </p>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {meta.description}
-              </p>
             </div>
-          </div>
-        ) : (
-          <div className="flex h-full items-center text-sm text-muted-foreground">
-            Starting position — use the controls or click a move to step through
-            the game.
-          </div>
-        )}
+          ) : move && meta ? (
+            <div className="flex items-start gap-3">
+              <span className="animate-badge-pop">
+                <MoveRatingIcon rating={move.rating} size={30} />
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-lg font-semibold tabular-nums">
+                    {move.moveNumber}
+                    {move.color === 'w' ? '.' : '...'} {move.san}
+                  </span>
+                  <span
+                    className="rounded-md px-1.5 py-0.5 text-xs font-semibold"
+                    style={{
+                      color: meta.colorVar,
+                      backgroundColor: `color-mix(in srgb, ${meta.colorVar} 16%, transparent)`,
+                    }}
+                  >
+                    {meta.symbol === meta.label
+                      ? meta.label
+                      : `${meta.symbol} ${meta.label}`}
+                  </span>
+                  {showLoss && (
+                    <span
+                      className="rounded-md px-1.5 py-0.5 text-xs font-semibold text-[var(--rating-blunder)]"
+                      style={{
+                        backgroundColor:
+                          'color-mix(in srgb, var(--rating-blunder) 14%, transparent)',
+                      }}
+                    >
+                      −{(move.cpLoss / 100).toFixed(2)}
+                    </span>
+                  )}
+                  <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
+                    {evalText(toWhiteCp(move.evalAfter))}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {meta.description}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-full items-center text-sm text-muted-foreground">
+              Starting position — use the controls or click a move to step
+              through the game.
+            </div>
+          )}
+        </div>
       </div>
 
       {showBest && (

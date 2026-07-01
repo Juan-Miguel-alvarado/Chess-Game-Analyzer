@@ -3,7 +3,6 @@ import { Chess } from 'chess.js'
 import {
   IconArrowBackUp,
   IconArrowLeft,
-  IconArrowsDiagonal,
   IconChessFilled,
   IconLoader2,
   IconPointer,
@@ -26,8 +25,7 @@ import type { ParsedGame } from '@/lib/chess'
 import type { AnalyzedMove, EvalResult } from '@/lib/types'
 
 const DEPTH = 16
-const MIN_BOARD = 300
-const MAX_BOARD = 680
+const MAX_BOARD = 560
 const EMPTY_EVAL: EvalResult = { cp: 0, mate: null, bestMoveUci: null, depth: 0 }
 
 type Pos = { line: 'main' | 'var'; ply: number }
@@ -36,7 +34,9 @@ export default function App() {
   const { ready, state, analyze, reset, evaluate } = useGameAnalysis(DEPTH)
   const [game, setGame] = useState<ParsedGame | null>(null)
   const [orientation, setOrientation] = useState<'white' | 'black'>('white')
-  const [boardSize, setBoardSize] = useState(420)
+  // Board auto-fits its available space (responsive; no manual resize).
+  const boardAreaRef = useRef<HTMLDivElement>(null)
+  const [boardSize, setBoardSize] = useState(360)
 
   // The analyzed game (mainline) plus an optional user-played secondary line.
   const [mainMoves, setMainMoves] = useState<AnalyzedMove[]>([])
@@ -231,26 +231,25 @@ export default function App() {
     setPos({ line: 'main', ply: at })
   }, [variation])
 
-  // Drag-to-resize the board.
-  const onResizeStart = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault()
-      const startX = e.clientX
-      const startY = e.clientY
-      const start = boardSize
-      const move = (ev: PointerEvent) => {
-        const d = Math.max(ev.clientX - startX, ev.clientY - startY)
-        setBoardSize(Math.max(MIN_BOARD, Math.min(MAX_BOARD, start + d)))
-      }
-      const up = () => {
-        window.removeEventListener('pointermove', move)
-        window.removeEventListener('pointerup', up)
-      }
-      window.addEventListener('pointermove', move)
-      window.addEventListener('pointerup', up)
-    },
-    [boardSize],
-  )
+  // Auto-fit the board to its available width and the viewport height.
+  useEffect(() => {
+    if (!game) return
+    const el = boardAreaRef.current
+    if (!el) return
+    const update = () => {
+      const width = el.clientWidth
+      const height = window.innerHeight * 0.82
+      setBoardSize(Math.max(240, Math.min(width, height, MAX_BOARD)))
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    window.addEventListener('resize', update)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [game])
 
   const back = () => {
     reset()
@@ -312,53 +311,48 @@ export default function App() {
         </header>
 
         <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
-          {/* Board column */}
-          <div className="flex shrink-0 flex-col gap-3">
-            <div className="flex items-start gap-3" style={{ height: boardSize }}>
+          {/* Board column — auto-fits its width; stays pinned on desktop */}
+          <div className="mx-auto flex w-full max-w-[560px] flex-col gap-3 lg:mx-0 lg:w-[clamp(320px,40vw,540px)] lg:max-w-none lg:shrink-0 lg:sticky lg:top-4 lg:self-start">
+            <div className="flex items-stretch gap-2" style={{ height: boardSize }}>
               <EvalBar evaluation={currentEval} orientation={orientation} />
-              <div className="relative" style={{ width: boardSize }}>
-                <Board
-                  fen={fen}
-                  orientation={orientation}
-                  currentMove={currentMove}
-                  bestArrow={bestArrow}
-                  size={boardSize}
-                  interactive={state.status === 'done'}
-                  onMove={onMove}
-                />
-                {analyzing && (
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/55 backdrop-blur-[2px]">
-                    <IconLoader2 size={28} className="animate-spin text-primary" />
-                    <div className="w-2/3">
-                      <Progress value={Math.round(state.progress * 100)} />
-                    </div>
-                    <span className="text-sm font-medium">
-                      Analyzing… {Math.round(state.progress * 100)}%
-                    </span>
-                  </div>
-                )}
+              <div ref={boardAreaRef} className="flex min-w-0 flex-1 justify-center">
                 <div
-                  onPointerDown={onResizeStart}
-                  title="Drag to resize"
-                  className="absolute -bottom-1.5 -right-1.5 z-30 flex h-5 w-5 cursor-nwse-resize items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground hover:text-foreground"
+                  className="relative"
+                  style={{ width: boardSize, height: boardSize }}
                 >
-                  <IconArrowsDiagonal size={13} />
+                  <Board
+                    fen={fen}
+                    orientation={orientation}
+                    currentMove={currentMove}
+                    bestArrow={bestArrow}
+                    size={boardSize}
+                    interactive={state.status === 'done'}
+                    onMove={onMove}
+                  />
+                  {analyzing && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/55 backdrop-blur-[2px]">
+                      <IconLoader2 size={28} className="animate-spin text-primary" />
+                      <div className="w-2/3">
+                        <Progress value={Math.round(state.progress * 100)} />
+                      </div>
+                      <span className="text-sm font-medium">
+                        Analyzing… {Math.round(state.progress * 100)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {state.status === 'done' && (
-              <div
-                className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                style={{ maxWidth: boardSize + 40 }}
-              >
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <IconPointer size={14} />
                 Drag or click a piece to play your own line — it's analyzed as a
                 variation.
               </div>
             )}
 
-            <div style={{ maxWidth: boardSize + 40 }}>
+            <div>
               <AnalysisPanel
                 move={currentMove}
                 ply={ply}
@@ -373,25 +367,36 @@ export default function App() {
 
           {/* Right column */}
           <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
-            {/* One scroll container: accuracy + moves */}
-            <div className="scrollbar-thin flex max-h-[62vh] flex-col gap-4 overflow-y-auto rounded-xl border border-border bg-card p-4">
-              {summary && (
+            {/* Fixed summary — accuracy + rating breakdown (does not scroll) */}
+            {summary && (
+              <div className="shrink-0 rounded-xl border border-border bg-card p-4">
                 <GameSummary
                   summary={summary}
                   white={game.white}
                   black={game.black}
-                />
-              )}
-              <div className="border-t border-border pt-3">
-                <MoveList
-                  mainMoves={mainMoves}
-                  variation={variation}
-                  activeIndex={ply}
-                  activeIsVar={activeIsVar}
-                  onSelectMain={(i) => setPos({ line: 'main', ply: i })}
-                  onSelectVar={(i) => setPos({ line: 'var', ply: i })}
+                  moves={mainMoves}
+                  currentPly={pos.line === 'main' ? ply : -1}
+                  onJump={(i) => setPos({ line: 'main', ply: i })}
+                  activeRating={
+                    currentMove && !currentMove.pending ? currentMove.rating : null
+                  }
                 />
               </div>
+            )}
+
+            {/* Scrollable move list */}
+            <div
+              data-scroll-container
+              className="scrollbar-thin max-h-[46vh] min-h-[160px] flex-1 overflow-y-auto rounded-xl border border-border bg-card p-3"
+            >
+              <MoveList
+                mainMoves={mainMoves}
+                variation={variation}
+                activeIndex={ply}
+                activeIsVar={activeIsVar}
+                onSelectMain={(i) => setPos({ line: 'main', ply: i })}
+                onSelectVar={(i) => setPos({ line: 'var', ply: i })}
+              />
             </div>
 
             {summary && (
