@@ -4,7 +4,8 @@ A chess.com-style game analyzer that grades every move with Stockfish —
 running **entirely in your browser**, no backend. Import your games from
 Chess.com or Lichess by username, or paste any PGN.
 
-<img width="1307" height="676" alt="image" src="https://github.com/user-attachments/assets/d8662508-0432-4ce3-912d-5dcc3c2c8b27" />
+<img width="1303" height="672" alt="image" src="https://github.com/user-attachments/assets/7a0953ba-962e-4879-981b-be48ebc9f16e" />
+
 
 
 ## Features
